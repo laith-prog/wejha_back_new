@@ -28,5 +28,6 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(\Modules\Community\Database\Seeders\ListingCategorySeeder::class);
+        $this->call(\Modules\Community\Database\Seeders\HomePageSeeder::class);
     }
 }
