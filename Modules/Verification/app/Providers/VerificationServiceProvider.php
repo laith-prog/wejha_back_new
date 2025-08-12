@@ -7,7 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
-use Modules\Verification\App\Console\Commands\DeleteExpiredVerificationCodes;
+use App\Console\Commands\DeleteExpiredVerificationCodes;
 use Illuminate\Console\Scheduling\Schedule;
 
 class VerificationServiceProvider extends ServiceProvider
