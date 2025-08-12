@@ -18,6 +18,7 @@
     "autoload": {
         "psr-4": {
             "Modules\\Verification\\": "app/",
+            "Modules\\Verification\\App\\": "Modules/Verification/app/",
             "Modules\\Verification\\Database\\Factories\\": "database/factories/",
             "Modules\\Verification\\Database\\Seeders\\": "database/seeders/"
         }
