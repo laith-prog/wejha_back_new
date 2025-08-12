@@ -1,0 +1,6 @@
+{
+    "Auth": true,
+    "User": true,
+    "Verification": true,
+    "Community": true
+}

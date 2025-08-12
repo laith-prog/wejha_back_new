@@ -1,0 +1,11 @@
+{
+    "name": "Community",
+    "alias": "community",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Community\\Providers\\CommunityServiceProvider"
+    ],
+    "files": []
+}
