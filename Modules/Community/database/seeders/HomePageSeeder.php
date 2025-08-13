@@ -262,7 +262,7 @@ class HomePageSeeder extends Seeder
                                 'offer_type' => in_array($demo['purpose'], ['rent', 'sell']) ? $demo['purpose'] : 'rent',
                                 'room_number' => 2,
                                 'bathrooms' => 2,
-                                'area' => 110.00,
+                                'property_area' => 110.00,
                                 'floors' => null,
                                 'floor_number' => 5,
                                 'has_parking' => true,
