@@ -37,7 +37,7 @@ Route::prefix('listings')->group(function () {
     Route::get('/', [ListingController::class, 'index']);
     Route::get('/search', [ListingController::class, 'search']);
     Route::get('/{id}', [ListingController::class, 'show']);
-    
+
     // Protected routes - only for service providers
     Route::middleware(['auth:api', 'service_provider'])->group(function () {
         Route::post('/', [ListingController::class, 'store']);
@@ -53,7 +53,7 @@ Route::prefix('real-estate')->group(function () {
     Route::get('/search', [RealEstateController::class, 'search']);
     Route::get('/{id}', [RealEstateController::class, 'show']);
     Route::get('/create', [RealEstateController::class, 'create']); // Moved to public for form data
-    
+
     // Protected routes - only for service providers
     Route::middleware(['auth:api', 'service_provider'])->group(function () {
         Route::post('/', [RealEstateController::class, 'store']);
@@ -67,7 +67,7 @@ Route::prefix('vehicles')->group(function () {
     Route::get('/search', [VehicleController::class, 'search']);
     Route::get('/{id}', [VehicleController::class, 'show']);
     Route::get('/create', [VehicleController::class, 'create']); // Moved to public for form data
-    
+
     // Protected routes - only for service providers
     Route::middleware(['auth:api', 'service_provider'])->group(function () {
         Route::post('/', [VehicleController::class, 'store']);
@@ -81,7 +81,7 @@ Route::prefix('services')->group(function () {
     Route::get('/search', [ServiceController::class, 'search']);
     Route::get('/{id}', [ServiceController::class, 'show']);
     Route::get('/create', [ServiceController::class, 'create']); // Moved to public for form data
-    
+
     // Protected routes - only for service providers
     Route::middleware(['auth:api', 'service_provider'])->group(function () {
         Route::post('/', [ServiceController::class, 'store']);
@@ -95,7 +95,7 @@ Route::prefix('jobs')->group(function () {
     Route::get('/search', [JobController::class, 'search']);
     Route::get('/{id}', [JobController::class, 'show']);
     Route::get('/create', [JobController::class, 'create']); // Moved to public for form data
-    
+
     // Protected routes - only for service providers
     Route::middleware(['auth:api', 'service_provider'])->group(function () {
         Route::post('/', [JobController::class, 'store']);
@@ -109,7 +109,7 @@ Route::prefix('bids')->group(function () {
     Route::get('/search', [BidController::class, 'search']);
     Route::get('/{id}', [BidController::class, 'show']);
     Route::get('/create', [BidController::class, 'create']); // Moved to public for form data
-    
+
     // Protected routes - only for service providers
     Route::middleware(['auth:api', 'service_provider'])->group(function () {
         Route::post('/', [BidController::class, 'store']);
@@ -121,6 +121,13 @@ Route::prefix('community')->group(function () {
     Route::get('/home', [HomeController::class, 'index']);
     Route::get('/category', [HomeController::class, 'getListingsByCategory']);
     Route::get('/subcategory', [HomeController::class, 'getListingsBySubcategory']);
+
+    // New routes for specific listing types
+    Route::get('/featured-listings', [HomeController::class, 'getFeaturedListings']);
+    Route::get('/recent-listings', [HomeController::class, 'getRecentListings']);
+    Route::get('/popular-listings', [HomeController::class, 'getPopularListings']);
+    Route::get('/nearby-listings', [HomeController::class, 'getNearbyListings']);
+    Route::get('/recommended-listings', [HomeController::class, 'getRecommendedListings']);
 });
 
 // Search Routes
@@ -130,7 +137,7 @@ Route::prefix('search')->group(function () {
     Route::get('/advanced', [SearchController::class, 'advancedSearch']);
     Route::get('/filters', [SearchController::class, 'getSearchFilters']);
     Route::get('/popular', [SearchController::class, 'getPopularSearches']);
-    
+
     // Authenticated search routes
     Route::middleware('auth:api')->group(function () {
         Route::get('/recent', [SearchController::class, 'getRecentSearches']);
@@ -207,7 +214,7 @@ Route::prefix('reviews')->middleware('auth:api')->group(function () {
     Route::post('/service-providers', [ReviewController::class, 'createServiceProviderReview']);
     Route::put('/service-providers/{id}', [ReviewController::class, 'updateServiceProviderReview']);
     Route::delete('/service-providers/{id}', [ReviewController::class, 'deleteServiceProviderReview']);
-    
+
     // Listing reviews
     Route::post('/listings', [ReviewController::class, 'createListingReview']);
     Route::put('/listings/{id}', [ReviewController::class, 'updateListingReview']);
@@ -225,11 +232,11 @@ Route::prefix('reports')->group(function () {
         Route::post('/listings', [ReportController::class, 'reportListing']);
         Route::post('/service-providers', [ReportController::class, 'reportServiceProvider']);
     });
-    
+
     // Public routes for getting report reasons
     Route::get('/listings/reasons', [ReportController::class, 'getListingReportReasons']);
     Route::get('/service-providers/reasons', [ReportController::class, 'getServiceProviderReportReasons']);
-    
+
     // Admin routes for managing reports
     Route::middleware(['auth:api', 'admin'])->group(function () {
         Route::get('/listings', [ReportController::class, 'getListingReports']);
