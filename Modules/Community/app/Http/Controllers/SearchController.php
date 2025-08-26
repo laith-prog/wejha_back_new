@@ -464,6 +464,12 @@ class SearchController extends Controller
             if ($request->has('furnished')) {
                 $query->where('real_estate_listings.furnished', $request->furnished);
             }
+            
+            // Property age filter (for sales specifically)
+            if ($request->has('property_age')) {
+                $query->where('real_estate_listings.property_age', $request->property_age);
+            }
+            
             // Under construction filter (for sales specifically)
             if ($request->has('under_construction')) {
                 $query->where('listings.facility_under_construction', $request->under_construction == 'true');
@@ -600,6 +606,12 @@ class SearchController extends Controller
             if ($request->has('furnished')) {
                 $query->where('real_estate_listings.furnished', $request->furnished);
             }
+            
+            // Property age filter (for sales specifically)
+            if ($request->has('property_age')) {
+                $query->where('real_estate_listings.property_age', $request->property_age);
+            }
+            
             // Under construction filter (for sales specifically)
             if ($request->has('under_construction')) {
                 $query->where('listings.facility_under_construction', $request->under_construction == 'true');
@@ -1080,6 +1092,8 @@ class SearchController extends Controller
                 ['id' => 'no', 'name' => 'غير مفروش'],
                 ['id' => 'partially', 'name' => 'مفروش جزئيًا']
             ];
+            
+            // Property age options (for sales specifically)
             $propertyAgeOptions = [
                 ['id' => 'new', 'name' => 'جديد'],
                 ['id' => '0-5', 'name' => '0-5 سنوات'],
@@ -1117,6 +1131,7 @@ class SearchController extends Controller
                     'bedroom_options' => $bedroomOptions,
                     'bathroom_options' => $bathroomOptions,
                     'furnished_options' => $furnishedOptions,
+                    'property_age_options' => $propertyAgeOptions,
                     'construction_options' => $constructionOptions,
                     'amenities' => $amenities
                 ]
@@ -3640,5 +3655,3 @@ class SearchController extends Controller
         }
     }
 } 
-
-

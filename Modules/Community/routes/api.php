@@ -60,6 +60,12 @@ Route::prefix('real-estate')->group(function () {
     });
 });
 
+// Room Rental Routes (specific to real estate)
+Route::prefix('real-estate/rooms')->group(function () {
+    // Public routes
+    Route::get('/search', [RealEstateController::class, 'roomSearch']);
+});
+
 // Vehicle Listing Routes
 Route::prefix('vehicles')->group(function () {
     // Public routes

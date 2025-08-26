@@ -25,75 +25,75 @@ class RealEstateController extends Controller
         $realEstateCategory = DB::table('listing_categories')
             ->where('name', 'real_estate')
             ->first();
-            
+
         if (!$realEstateCategory) {
             return response()->json([
                 'success' => false,
                 'message' => 'Real estate category not found'
             ], 404);
         }
-        
+
         $query = DB::table('listings')
             ->join('real_estate_listings', 'listings.id', '=', 'real_estate_listings.listing_id')
             ->leftJoin('listing_subcategories', 'listings.subcategory_id', '=', 'listing_subcategories.id')
             ->where('listings.category_id', $realEstateCategory->id)
             ->select(
-                'listings.*', 
+                'listings.*',
                 'real_estate_listings.*',
                 'listing_subcategories.name as property_type_name',
                 'listing_subcategories.display_name as property_type_display_name'
             );
-        
+
         // Apply filters
         if ($request->has('subcategory_id')) {
             $query->where('listings.subcategory_id', $request->subcategory_id);
         }
-        
+
         if ($request->has('offer_type')) {
             $query->where('real_estate_listings.offer_type', $request->offer_type);
         }
-        
+
         if ($request->has('min_price')) {
             $query->where('listings.price', '>=', $request->min_price);
         }
-        
+
         if ($request->has('max_price')) {
             $query->where('listings.price', '<=', $request->max_price);
         }
-        
+
         if ($request->has('min_area')) {
             $query->where('real_estate_listings.property_area', '>=', $request->min_area);
         }
-        
+
         if ($request->has('max_area')) {
             $query->where('real_estate_listings.property_area', '<=', $request->max_area);
         }
-        
+
         if ($request->has('rooms')) {
             $query->where('real_estate_listings.room_number', $request->rooms);
         }
-        
+
         if ($request->has('bathrooms')) {
             $query->where('real_estate_listings.bathrooms', $request->bathrooms);
         }
-        
+
         if ($request->has('is_room_rental')) {
             $query->where('real_estate_listings.is_room_rental', $request->is_room_rental);
         }
-        
+
         if ($request->has('facility_under_construction')) {
             $query->where('listings.facility_under_construction', $request->facility_under_construction);
         }
-        
+
         // Sort results
         $sortBy = $request->sort_by ?? 'created_at';
         $sortDirection = $request->sort_direction ?? 'desc';
         $query->orderBy("listings.$sortBy", $sortDirection);
-        
+
         // Paginate results
         $perPage = $request->per_page ?? 10;
         $results = $query->paginate($perPage);
-        
+
         return response()->json([
             'success' => true,
             'data' => $results->items(),
@@ -117,25 +117,25 @@ class RealEstateController extends Controller
         $realEstateCategory = DB::table('listing_categories')
             ->where('name', 'real_estate')
             ->first();
-            
+
         if (!$realEstateCategory) {
             return response()->json([
                 'success' => false,
                 'message' => 'Real estate category not found'
             ], 404);
         }
-        
+
         // Get property types (subcategories)
         $propertyTypes = DB::table('listing_subcategories')
             ->where('category_id', $realEstateCategory->id)
             ->where('is_active', true)
             ->orderBy('display_order')
             ->get();
-        
+
         $offerTypes = [
             'rent', 'sell'
         ];
-        
+
         return response()->json([
             'success' => true,
             'category' => $realEstateCategory,
@@ -168,7 +168,19 @@ class RealEstateController extends Controller
             'city' => 'required|string|max:255',
             'area' => 'required|string|max:255',
             'property_area' => 'required|numeric',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            // Room rental specific validations
+            'gender_preference' => 'nullable|string|in:male,female,mixed',
+            'bathroom_type' => 'nullable|string|in:private,shared',
+            'utilities_included' => 'nullable|boolean',
+            'internet_included' => 'nullable|boolean',
+            'rent_period' => 'nullable|string|in:daily,weekly,monthly,yearly',
+            'house_rules' => 'nullable|string',
+            'max_occupants' => 'nullable|integer|min:1',
+            'smoking_allowed' => 'nullable|boolean',
+            'pets_allowed' => 'nullable|boolean',
+            'quiet_hours_start' => 'nullable|date_format:H:i',
+            'quiet_hours_end' => 'nullable|date_format:H:i'
         ]);
 
         try {
@@ -176,19 +188,19 @@ class RealEstateController extends Controller
             $realEstateCategory = DB::table('listing_categories')
                 ->where('name', 'real_estate')
                 ->first();
-                
+
             if (!$realEstateCategory) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Real estate category not found'
                 ], 404);
             }
-            
+
             DB::beginTransaction();
-            
+
             // Create the base listing
             $postNumber = 'RE-' . Str::random(8);
-            
+
             $listing = [
                 'user_id' => Auth::id(),
                 'title' => $request->title,
@@ -215,14 +227,14 @@ class RealEstateController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ];
-            
+
             $listingId = DB::table('listings')->insertGetId($listing);
-            
+
             // Get property type from subcategory
             $subcategory = DB::table('listing_subcategories')
                 ->where('id', $request->subcategory_id)
                 ->first();
-                
+
             // Create the real estate specific listing
             $realEstateListing = [
                 'listing_id' => $listingId,
@@ -245,20 +257,32 @@ class RealEstateController extends Controller
                 'amenities' => $request->amenities ? json_encode($request->amenities) : null,
                 'is_room_rental' => $request->is_room_rental ?? false,
                 'room_area' => $request->room_area,
+                // Room rental specific fields
+                'gender_preference' => $request->gender_preference,
+                'bathroom_type' => $request->bathroom_type,
+                'utilities_included' => $request->utilities_included ?? false,
+                'internet_included' => $request->internet_included ?? false,
+                'rent_period' => $request->rent_period,
+                'house_rules' => $request->house_rules,
+                'max_occupants' => $request->max_occupants,
+                'smoking_allowed' => $request->smoking_allowed ?? false,
+                'pets_allowed' => $request->pets_allowed ?? false,
+                'quiet_hours_start' => $request->quiet_hours_start,
+                'quiet_hours_end' => $request->quiet_hours_end,
                 'created_at' => now(),
                 'updated_at' => now()
             ];
-            
+
             DB::table('real_estate_listings')->insert($realEstateListing);
-            
+
             // Handle image uploads
             if ($request->hasFile('images')) {
                 $imageService = app(ListingImageService::class);
                 $imageService->uploadListingImages($listingId, $request->file('images'));
             }
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Real estate listing created successfully',
@@ -267,10 +291,10 @@ class RealEstateController extends Controller
                     'post_number' => $postNumber
                 ]
             ], 201);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create real estate listing',
@@ -293,7 +317,7 @@ class RealEstateController extends Controller
             ->leftJoin('listing_subcategories', 'listings.subcategory_id', '=', 'listing_subcategories.id')
             ->where('listings.id', $id)
             ->select(
-                'listings.*', 
+                'listings.*',
                 'real_estate_listings.*',
                 'listing_categories.name as category_name',
                 'listing_categories.display_name as category_display_name',
@@ -301,25 +325,25 @@ class RealEstateController extends Controller
                 'listing_subcategories.display_name as subcategory_display_name'
             )
             ->first();
-            
+
         if (!$listing) {
             return response()->json([
                 'success' => false,
                 'message' => 'Real estate listing not found'
             ], 404);
         }
-        
+
         // Get listing images
         $images = DB::table('listing_images')
             ->where('listing_id', $id)
             ->orderBy('display_order')
             ->get();
-            
+
         // Increment view count
         DB::table('listings')
             ->where('id', $id)
             ->increment('views_count');
-            
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -342,34 +366,34 @@ class RealEstateController extends Controller
                 ->where('id', $id)
                 ->where('user_id', Auth::id()) // This will now be a UUID
                 ->first();
-                
+
             if (!$listing) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Real estate listing not found or you do not have permission to delete it'
                 ], 404);
             }
-            
+
             DB::beginTransaction();
-            
+
             // Delete images from storage
             $imageService = app(ListingImageService::class);
             $imageService->deleteListingImages($id);
-            
+
             // Delete related records
             DB::table('real_estate_listings')->where('listing_id', $id)->delete();
             DB::table('listings')->where('id', $id)->delete();
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Real estate listing deleted successfully'
             ]);
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete real estate listing',
@@ -377,7 +401,7 @@ class RealEstateController extends Controller
             ], 500);
         }
     }
-    
+
     /**
      * Search for real estate listings based on criteria.
      *
@@ -390,19 +414,19 @@ class RealEstateController extends Controller
         $realEstateCategory = DB::table('listing_categories')
             ->where('name', 'real_estate')
             ->first();
-            
+
         if (!$realEstateCategory) {
             return response()->json([
                 'success' => false,
                 'message' => 'Real estate category not found'
             ], 404);
         }
-        
+
         $query = DB::table('listings')
             ->join('real_estate_listings', 'listings.id', '=', 'real_estate_listings.listing_id')
             ->where('listings.category_id', $realEstateCategory->id)
             ->select('listings.*', 'real_estate_listings.*');
-            
+
         // Apply filters
         if ($request->has('subcategory_id')) {
             $query->where('listings.subcategory_id', $request->subcategory_id);
@@ -410,76 +434,76 @@ class RealEstateController extends Controller
             // For backward compatibility
             $query->where('real_estate_listings.property_type', $request->property_type);
         }
-        
+
         if ($request->has('offer_type')) {
             $query->where('real_estate_listings.offer_type', $request->offer_type);
         }
-        
+
         if ($request->has('min_price')) {
             $query->where('listings.price', '>=', $request->min_price);
         }
-        
+
         if ($request->has('max_price')) {
             $query->where('listings.price', '<=', $request->max_price);
         }
-        
+
         if ($request->has('min_area')) {
             $query->where('real_estate_listings.property_area', '>=', $request->min_area);
         }
-        
+
         if ($request->has('max_area')) {
             $query->where('real_estate_listings.property_area', '<=', $request->max_area);
         }
-        
+
         if ($request->has('rooms')) {
             $query->where('real_estate_listings.room_number', $request->rooms);
         }
-        
+
         if ($request->has('bathrooms')) {
             $query->where('real_estate_listings.bathrooms', $request->bathrooms);
         }
-        
+
         if ($request->has('is_room_rental')) {
             $query->where('real_estate_listings.is_room_rental', $request->is_room_rental);
         }
-        
+
         if ($request->has('facility_under_construction')) {
             $query->where('listings.facility_under_construction', $request->facility_under_construction);
         }
-        
+
         // Location-based filters
         if ($request->has('city')) {
             $query->where('listings.city', $request->city);
         }
-        
+
         if ($request->has('area')) {
             $query->where('listings.area', $request->area);
         }
-        
+
         // Radius search if lat, lng, and radius are provided
         if ($request->has('lat') && $request->has('lng') && $request->has('radius')) {
             $lat = $request->lat;
             $lng = $request->lng;
             $radius = $request->radius; // in kilometers
-            
+
             // Haversine formula to calculate distance
             $query->selectRaw(
-                '(6371 * acos(cos(radians(?)) * cos(radians(listings.lat)) * cos(radians(listings.lng) - radians(?)) + sin(radians(?)) * sin(radians(listings.lat)))) AS distance', 
+                '(6371 * acos(cos(radians(?)) * cos(radians(listings.lat)) * cos(radians(listings.lng) - radians(?)) + sin(radians(?)) * sin(radians(listings.lat)))) AS distance',
                 [$lat, $lng, $lat]
             )
             ->having('distance', '<=', $radius)
             ->orderBy('distance');
         }
-        
+
         // Sort results
         $sortBy = $request->sort_by ?? 'created_at';
         $sortDirection = $request->sort_direction ?? 'desc';
         $query->orderBy("listings.$sortBy", $sortDirection);
-        
+
         // Paginate results
         $perPage = $request->per_page ?? 10;
         $results = $query->paginate($perPage);
-        
+
         return response()->json([
             'success' => true,
             'data' => $results->items(),
@@ -491,7 +515,200 @@ class RealEstateController extends Controller
             ]
         ]);
     }
-    
+
+    /**
+     * Search for room rentals with specific filters.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function roomSearch(Request $request)
+    {
+        try {
+            // Get the real_estate category ID
+            $realEstateCategory = DB::table('listing_categories')
+                ->where('name', 'real_estate')
+                ->first();
+
+            if (!$realEstateCategory) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Real estate category not found'
+                ], 404);
+            }
+
+            $query = DB::table('listings')
+                ->join('real_estate_listings', 'listings.id', '=', 'real_estate_listings.listing_id')
+                ->leftJoin('listing_subcategories', 'listings.subcategory_id', '=', 'listing_subcategories.id')
+                ->where('listings.status', 'active')
+                ->where('listings.category_id', $realEstateCategory->id)
+                ->where('listings.purpose', 'rent')
+                ->where('real_estate_listings.is_room_rental', true)
+                ->select(
+                    'listings.id as listing_id',
+                    'listings.title',
+                    'listings.description',
+                    'listings.price',
+                    'listings.price_type',
+                    'listings.currency',
+                    'listings.phone_number',
+                    'listings.purpose',
+                    'listings.lat',
+                    'listings.lng',
+                    'listings.city',
+                    'listings.area',
+                    'listings.status',
+                    'listings.created_at',
+                    'listings.updated_at',
+                    'real_estate_listings.id as real_estate_id',
+                    'real_estate_listings.property_type',
+                    'real_estate_listings.offer_type',
+                    'real_estate_listings.room_number',
+                    'real_estate_listings.bathrooms',
+                    'real_estate_listings.property_area',
+                    'real_estate_listings.floors',
+                    'real_estate_listings.floor_number',
+                    'real_estate_listings.has_parking',
+                    'real_estate_listings.has_garden',
+                    'real_estate_listings.balcony',
+                    'real_estate_listings.has_pool',
+                    'real_estate_listings.has_elevator',
+                    'real_estate_listings.furnished',
+                    'real_estate_listings.year_built',
+                    'real_estate_listings.ownership_type',
+                    'real_estate_listings.legal_status',
+                    'real_estate_listings.amenities',
+                    'real_estate_listings.is_room_rental',
+                    'real_estate_listings.room_area',
+                    'real_estate_listings.gender_preference',
+                    'real_estate_listings.bathroom_type',
+                    'real_estate_listings.utilities_included',
+                    'real_estate_listings.internet_included',
+                    'real_estate_listings.rent_period',
+                    'real_estate_listings.house_rules',
+                    'real_estate_listings.max_occupants',
+                    'real_estate_listings.smoking_allowed',
+                    'real_estate_listings.pets_allowed',
+                    'real_estate_listings.quiet_hours_start',
+                    'real_estate_listings.quiet_hours_end',
+                    'listing_subcategories.name as property_type_name',
+                    'listing_subcategories.display_name as property_type_display_name'
+                );
+
+            // Location-based filters - lat/lng with radius
+            if ($request->has('lat') && $request->has('lng')) {
+                $lat = $request->lat;
+                $lng = $request->lng;
+                $radius = $request->radius ?? 10; // Default 10km radius
+
+                // Simple bounding box filter (approximate)
+                $latDelta = $radius / 111; // Rough conversion: 1 degree ≈ 111 km
+                $lngDelta = $radius / (111 * cos(deg2rad($lat)));
+
+                $query->whereBetween('listings.lat', [$lat - $latDelta, $lat + $latDelta])
+                      ->whereBetween('listings.lng', [$lng - $lngDelta, $lng + $lngDelta]);
+            }
+
+            // Price range filters
+            if ($request->has('min_price')) {
+                $query->where('listings.price', '>=', $request->min_price);
+            }
+
+            if ($request->has('max_price')) {
+                $query->where('listings.price', '<=', $request->max_price);
+            }
+
+            // Room area filters
+            if ($request->has('min_area')) {
+                $query->where('real_estate_listings.room_area', '>=', $request->min_area);
+            }
+
+            if ($request->has('max_area')) {
+                $query->where('real_estate_listings.room_area', '<=', $request->max_area);
+            }
+
+            // Rent period filter (daily, weekly, monthly, yearly)
+            if ($request->has('rent_period')) {
+                $query->where('real_estate_listings.rent_period', $request->rent_period);
+            }
+
+            // Number of bathrooms
+            if ($request->has('bathrooms')) {
+                $query->where('real_estate_listings.bathrooms', $request->bathrooms);
+            }
+
+            // Bathroom type (private, shared)
+            if ($request->has('bathroom_type')) {
+                $query->where('real_estate_listings.bathroom_type', $request->bathroom_type);
+            }
+
+            // Gender preference
+            if ($request->has('gender')) {
+                $query->where('real_estate_listings.gender_preference', $request->gender);
+            }
+
+            // Utilities included
+            if ($request->has('utilities_included')) {
+                $query->where('real_estate_listings.utilities_included', $request->utilities_included);
+            }
+
+            // Internet included
+            if ($request->has('internet_included')) {
+                $query->where('real_estate_listings.internet_included', $request->internet_included);
+            }
+
+            // Furnished status
+            if ($request->has('furnished')) {
+                $query->where('real_estate_listings.furnished', $request->furnished);
+            }
+
+            // Smoking allowed
+            if ($request->has('smoking_allowed')) {
+                $query->where('real_estate_listings.smoking_allowed', $request->smoking_allowed);
+            }
+
+            // Pets allowed
+            if ($request->has('pets_allowed')) {
+                $query->where('real_estate_listings.pets_allowed', $request->pets_allowed);
+            }
+
+            // Maximum occupants
+            if ($request->has('max_occupants')) {
+                $query->where('real_estate_listings.max_occupants', '>=', $request->max_occupants);
+            }
+
+            // Sort results
+            $sortBy = $request->sort_by ?? 'created_at';
+            $sortDirection = $request->sort_direction ?? 'desc';
+
+            if (!$request->has('lat') || !$request->has('lng')) {
+                $query->orderBy("listings.$sortBy", $sortDirection);
+            }
+
+            // Paginate results
+            $perPage = $request->per_page ?? 10;
+            $results = $query->paginate($perPage);
+
+            return response()->json([
+                'success' => true,
+                'data' => $results->items(),
+                'pagination' => [
+                    'total' => $results->total(),
+                    'per_page' => $results->perPage(),
+                    'current_page' => $results->currentPage(),
+                    'last_page' => $results->lastPage(),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to search room rentals',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     /**
      * Toggle favorite status for a real estate listing.
      *
@@ -501,23 +718,23 @@ class RealEstateController extends Controller
     public function toggleFavorite($id)
     {
         $userId = Auth::id(); // This will now be a UUID
-        
+
         $favorite = DB::table('user_favorites')
             ->where('user_id', $userId)
             ->where('listing_id', $id)
             ->first();
-            
+
         if ($favorite) {
             // Remove from favorites
             DB::table('user_favorites')
                 ->where('user_id', $userId)
                 ->where('listing_id', $id)
                 ->delete();
-                
+
             DB::table('listings')
                 ->where('id', $id)
                 ->decrement('favorites_count');
-                
+
             return response()->json([
                 'success' => true,
                 'message' => 'Removed from favorites',
@@ -531,11 +748,11 @@ class RealEstateController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
-            
+
             DB::table('listings')
                 ->where('id', $id)
                 ->increment('favorites_count');
-                
+
             return response()->json([
                 'success' => true,
                 'message' => 'Added to favorites',
@@ -543,7 +760,7 @@ class RealEstateController extends Controller
             ]);
         }
     }
-    
+
     /**
      * Report a real estate listing.
      *
@@ -557,22 +774,22 @@ class RealEstateController extends Controller
             'reason' => 'required|string',
             'details' => 'nullable|string'
         ]);
-        
+
         $userId = Auth::id(); // This will now be a UUID
-        
+
         // Check if listing exists
         $listing = DB::table('listings')
             ->where('id', $id)
             ->where('listing_type', 'real_estate')
             ->first();
-            
+
         if (!$listing) {
             return response()->json([
                 'success' => false,
                 'message' => 'Real estate listing not found'
             ], 404);
         }
-        
+
         // Create report
         DB::table('listing_reports')->insert([
             'user_id' => $userId,
@@ -583,15 +800,15 @@ class RealEstateController extends Controller
             'created_at' => now(),
             'updated_at' => now()
         ]);
-        
+
         // Increment reports count
         DB::table('listings')
             ->where('id', $id)
             ->increment('reports_count');
-            
+
         return response()->json([
             'success' => true,
             'message' => 'Listing reported successfully'
         ]);
     }
-} 
+}
